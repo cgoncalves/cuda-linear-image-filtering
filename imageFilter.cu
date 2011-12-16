@@ -14,14 +14,14 @@
 #define max(a,b) (((a)>(b))?(a):(b))
 #define min(a,b) (((a)<(b))?(a):(b))
 
-// loads filter coefficients from file fname, 
+// loads filter coefficients from file fname,
 // allocates memory through parray and stores width and height of filter through pwidth and pheight
 int loadFilter(char* fname, float** parray, unsigned int *pwidth, unsigned int *pheight)
 {
     FILE* fp;
 
     if( (fp=fopen(fname, "r")) == NULL)
-    {    
+    {
         fprintf(stderr,"Failed to open filter file %s\n",fname);
         return -1;
     }
@@ -37,26 +37,26 @@ int loadFilter(char* fname, float** parray, unsigned int *pwidth, unsigned int *
     for(i=0;i<(*pwidth)*(*pheight);i++)
     {
         if(fscanf(fp,"%f",(*parray+i))!=1) {
-           fprintf(stderr,"Failed to read data of filter file %s\n",fname);
-           return -1;
+            fprintf(stderr,"Failed to read data of filter file %s\n",fname);
+            return -1;
         }
     }
 
     fclose(fp);
-    
+
     return 0;
 }
 
 
 // filter code to run on the host
-void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h, 
-                float* filter, unsigned int fw, unsigned int fh, 
-                unsigned int* reference)
+void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h,
+        float* filter, unsigned int fw, unsigned int fh,
+        unsigned int* reference)
 {
     int i,j,k,l;
 
-           int fh_2 = fh/2;
-            int fw_2 = fw/2;
+    int fh_2 = fh/2;
+    int fw_2 = fw/2;
 
     for(i=0; i<h; i++) //height image
     {
@@ -69,7 +69,7 @@ void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h,
                 {
                     if( (i+k >= 0) && (i+k < h))
                         if( (j+l >=0) && (j+l < w)) {
-                            sum += h_idata[(i+k)*w + j+l]*filter[(k+fh/2)*fw + l+fw/2];         
+                            sum += h_idata[(i+k)*w + j+l]*filter[(k+fh/2)*fw + l+fw/2];
                         }
 
                 }
@@ -77,24 +77,24 @@ void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h,
             reference[i*w+j] = min(max(sum,0),255);
         }
     }
-}   
+}
 
 // filter code to run on the GPU
-void filterDevice(unsigned int *h_idata, unsigned int w, unsigned int h, 
-                float* filter, unsigned int fw, unsigned int fh, 
-                unsigned int* h_odata)
+void filterDevice(unsigned int *h_idata, unsigned int w, unsigned int h,
+        float* filter, unsigned int fw, unsigned int fh,
+        unsigned int* h_odata)
 {
     //TODO
 }
 
 // print command line format
-void usage(char *command) 
+void usage(char *command)
 {
     printf("Usage: %s [-h] [-d device] [-i inputfile] [-o outputfile] [-f filterfile]\n",command);
 }
 
 // main
-int main( int argc, char** argv) 
+int main( int argc, char** argv)
 {
 
     // default command line options
@@ -151,7 +151,7 @@ int main( int argc, char** argv)
 
     // select cuda device
     cutilSafeCall( cudaSetDevice( deviceId ) );
-    
+
     // create events to measure host filter time and device filter time
     cudaEvent_t startH, stopH, startD, stopD;
     cudaEventCreate(&startH);
@@ -174,26 +174,26 @@ int main( int argc, char** argv)
     unsigned int fh, fw;
     if(loadFilter(fileFilter, &filter, &fw, &fh)==-1)
     {
-       printf("Failed to load filter file: %s\n",fileFilter);
-       exit(1);
+        printf("Failed to load filter file: %s\n",fileFilter);
+        exit(1);
     }
 
     // allocate mem for the result on host side
     unsigned int* h_odata = (unsigned int*) malloc( h*w*sizeof(unsigned int));
     unsigned int* reference = (unsigned int*) malloc( h*w*sizeof(unsigned int));
- 
+
     // filter at host
     cudaEventRecord( startH, 0 );
-    filterHost(h_idata, w, h, filter, fw, fh, reference);   
-    cudaEventRecord( stopH, 0 ); 
+    filterHost(h_idata, w, h, filter, fw, fh, reference);
+    cudaEventRecord( stopH, 0 );
     cudaEventSynchronize( stopH );
 
     // filter at GPU
     cudaEventRecord( startD, 0 );
-    filterDevice(h_idata, w, h, filter, fw, fh, h_odata);   
-    cudaEventRecord( stopD, 0 ); 
+    filterDevice(h_idata, w, h, filter, fw, fh, h_odata);
+    cudaEventRecord( stopD, 0 );
     cudaEventSynchronize( stopD );
-    
+
     // check if kernel execution generated and error
     cutilCheckMsg("Kernel execution failed");
 
