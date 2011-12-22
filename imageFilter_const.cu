@@ -8,11 +8,20 @@
 #include <math.h>
 #include <unistd.h>
 
+//#include <assert.h>
+//
+//#ifndef gpuAssert
+//#include <stdio.h>
+//#define gpuAssert( condition ) { if( (condition) != 0 ) { fprintf( stderr, "\n FAILURE %s in %s, line %d\n", cudaGetErrorString(condition), __FILE__, __LINE__ ); exit( 1 ); } }
+//#endif
+
 // includes, project
 #include <cutil_inline.h>
 
 #define max(a,b) (((a)>(b))?(a):(b))
 #define min(a,b) (((a)<(b))?(a):(b))
+
+__constant__ float f_const[3*3];
 
 // loads filter coefficients from file fname,
 // allocates memory through parray and stores width and height of filter through pwidth and pheight
@@ -79,8 +88,10 @@ void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h,
     }
 }
 
+// y = blockIdx.y * 32
+// x = blockIdx.x * 32
 __global__ void renderFilteredImage(unsigned int *in, unsigned int w, unsigned int h,
-        float *filter, unsigned int fw, unsigned int fh,
+        unsigned int fw, unsigned int fh,
         unsigned int *out) {
 
     int i, j, k, l;
@@ -90,8 +101,8 @@ __global__ void renderFilteredImage(unsigned int *in, unsigned int w, unsigned i
     fw_2 = fw/2;
     fh_2 = fh/2;
 
-    j = threadIdx.x;
-    i = blockIdx.y;
+    i = threadIdx.y + blockIdx.y *blockDim.y;
+    j = threadIdx.x + blockIdx.x *blockDim.x;
 
     for (k =- fh_2; k <= fh_2; k++) //filter height
     {
@@ -99,9 +110,8 @@ __global__ void renderFilteredImage(unsigned int *in, unsigned int w, unsigned i
         {
             if( (i+k >= 0) && (i+k < h))
                 if( (j+l >=0) && (j+l < w)) {
-                    sum += in[(i+k)*w + j+l] * filter[(k+fh/2)*fw + l+fw/2];
+                    sum += in[(i+k)*w + j+l] * f_const[(k+fh/2)*fw + l+fw/2];
                 }
-
         }
 
         out[i*w+j] = min(max(sum,0),255);
@@ -115,25 +125,26 @@ void filterDevice(unsigned int *h_idata, unsigned int w, unsigned int h,
         unsigned int* h_odata)
 {
     unsigned int *in, *out;
-    float *f;
+    //float *f;
     int size = w * h * sizeof(unsigned int);
 
     dim3 dimGrid(h/fh, w/fw);
     dim3 dimBlock(1, fw);
 
     cudaMalloc((void **)&in, size);
-    cudaMalloc((void **)&f, fw * fh * sizeof(float));
+    //cudaMalloc((void **)&f, fw * fh * sizeof(float));
     cudaMalloc((void **)&out, size);
 
     cudaMemcpy(in, h_idata, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(f, filter, fw * fh * sizeof(float), cudaMemcpyHostToDevice);
+    //cudaMemcpy(f, filter, fw * fh * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(f_const, filter, fw * fh * sizeof(float), 0, cudaMemcpyHostToDevice);
 
-    renderFilteredImage<<<dimGrid, dimBlock>>>(in, w, h, f, fw, fh, out);
+    renderFilteredImage<<<dimGrid, dimBlock>>>(in, w, h, fw, fh, out);
 
     cudaMemcpy(h_odata, out, size, cudaMemcpyDeviceToHost);
 
     cudaFree(in);
-    cudaFree(f);
+    //cudaFree(f);
     cudaFree(out);
 }
 
@@ -146,9 +157,8 @@ void usage(char *command)
 // main
 int main( int argc, char** argv)
 {
-
     // default command line options
-    int deviceId = 0;
+    int deviceId = 1;
     char *fileIn="lena.pgm",*fileOut="lenaOut.pgm",*fileFilter="filter.txt";
 
     // parse command line arguments
@@ -214,6 +224,7 @@ int main( int argc, char** argv)
     unsigned int* h_idata=NULL;
     unsigned int h,w;
     //load pgm
+
     if (cutLoadPGMi(fileIn, &h_idata, &w, &h) != CUTTrue) {
         printf("Failed to load image file: %s\n", fileIn);
         exit(1);
@@ -235,6 +246,7 @@ int main( int argc, char** argv)
     // filter at host
     cudaEventRecord( startH, 0 );
     filterHost(h_idata, w, h, filter, fw, fh, reference);
+    // filter at host
     cudaEventRecord( stopH, 0 );
     cudaEventSynchronize( stopH );
 
