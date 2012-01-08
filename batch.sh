@@ -19,19 +19,44 @@ reset()
     device_sum=0
 }
 
+showBar() {
+    # based on http://moblog.bradleyit.com/2010/02/simple-bash-progress-bar-function.html
+    percDone=$(echo 'scale=2;'$1/$2*100 | bc)
+    barLen=$(echo ${percDone%'.00'})
+    bar=''
+    fills=''
+
+    for (( b=0; b<$barLen; b++ ))
+    do
+        bar=$bar"="
+    done
+
+    blankSpaces=$(echo $((100-$barLen)))
+
+    for (( f=0; f<$blankSpaces; f++ ))
+    do
+        fills=$fills"_"
+    done
+
+    echo -en '\r['$bar'>'$fills'] - '$barLen'% ('$1'/'$2')'
+}
+
 run_seq()
 {
     reset
 
+    showBar 0 $LOOP
     for i in `seq 1 $LOOP`
     do
-        echo -en "\rIteration $i/$LOOP"
+        #echo -en "\rIteration $i/$LOOP"
         cmd=`./$1 -d $DEVICE -f $FILTER -i $INPUT -o $OUTPUT`
         host_time=`echo $cmd | awk 'NR==1 {printf $4}'`
         device_time=`echo $cmd | awk 'NR==1 {printf $9}'`
 
         host_sum=`echo $host_time + $host_sum | bc`
         device_sum=`echo $device_time + $device_sum | bc`
+
+        showBar $i $LOOP
     done
 
     echo
