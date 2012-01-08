@@ -124,10 +124,6 @@ void filterDevice(unsigned int *h_idata, unsigned int w, unsigned int h,
 
     dim3 dimGrid(dim_grid_x, dim_grid_y);
     dim3 dimBlock(BLOCK_DIM_X, BLOCK_DIM_Y);
-    //dim3 dimGrid(32, 32);
-    //dim3 dimBlock(16, 16);
-    //dim3 dimGrid(w);
-    //dim3 dimBlock(h);
 
     // memory allocation
     cudaMalloc((void **)&idata, data_size);
