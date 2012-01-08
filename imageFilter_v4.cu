@@ -11,6 +11,9 @@
 // includes, project
 #include <cutil_inline.h>
 
+#define BLOCK_DIM_X 16
+#define BLOCK_DIM_Y 16
+
 #define max(a,b) (((a)>(b))?(a):(b))
 #define min(a,b) (((a)<(b))?(a):(b))
 
@@ -79,62 +82,65 @@ void filterHost(unsigned int *h_idata, unsigned int w, unsigned int h,
     }
 }
 
-__global__ void renderFilteredImage(unsigned int *in, unsigned int w, unsigned int h,
+__global__ void renderFilteredImage(unsigned int *idata, unsigned int w, unsigned int h,
         float *filter, unsigned int fw, unsigned int fh,
-        unsigned int *out) {
+        unsigned int *odata) {
 
     int i, j, k, l;
-    int fw_2, fh_2;
-    float sum = 0;
+    unsigned int fw_2, fh_2;
+    float sum;
 
     fw_2 = fw/2;
     fh_2 = fh/2;
+    sum = 0;
 
+    // convalescence
     j = threadIdx.x;
     i = blockIdx.y;
 
     for (k =- fh_2; k <= fh_2; k++) //filter height
     {
         for (l =- fw_2; l <= fw_2; l++) //filter width
-        {
             if( (i+k >= 0) && (i+k < h))
-                if( (j+l >=0) && (j+l < w)) {
-                    sum += in[(i+k)*w + j+l] * filter[(k+fh/2)*fw + l+fw/2];
-                }
+                if( (j+l >=0) && (j+l < w))
+                    sum += idata[(i+k)*w + j+l] * filter[(k+fh/2)*fw + l+fw/2];
 
-        }
-
-        out[i*w+j] = min(max(sum,0),255);
+        odata[i*w+j] = min(max(sum,0),255);
     }
 }
 
-
-// filter code to run on the GPU
 void filterDevice(unsigned int *h_idata, unsigned int w, unsigned int h,
         float* filter, unsigned int fw, unsigned int fh,
         unsigned int* h_odata)
 {
-    unsigned int *in, *out;
+    unsigned int *idata, *odata, data_size, filter_size;
     float *f;
-    int size = w * h * sizeof(unsigned int);
 
-    dim3 dimGrid(h/fh, w/fw);
-    dim3 dimBlock(1, fw);
+    data_size = w * h * sizeof(unsigned int);
+    filter_size = fw * fh * sizeof(float);
 
-    cudaMalloc((void **)&in, size);
-    cudaMalloc((void **)&f, fw * fh * sizeof(float));
-    cudaMalloc((void **)&out, size);
+    dim3 dimGrid(w);
+    dim3 dimBlock(h);
 
-    cudaMemcpy(in, h_idata, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(f, filter, fw * fh * sizeof(float), cudaMemcpyHostToDevice);
+    // memory allocation
+    cudaMalloc((void **)&idata, data_size);
+    cudaMalloc((void **)&f, filter_size);
+    cudaMalloc((void **)&odata, data_size);
 
-    renderFilteredImage<<<dimGrid, dimBlock>>>(in, w, h, f, fw, fh, out);
+    // copy image and filter to device (CPU->GPU)
+    cudaMemcpy(idata, h_idata, data_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(f, filter, filter_size, cudaMemcpyHostToDevice);
 
-    cudaMemcpy(h_odata, out, size, cudaMemcpyDeviceToHost);
+    // render filtered image on GPU
+    renderFilteredImage<<<dimGrid, dimBlock>>>(idata, w, h, f, fw, fh, odata);
 
-    cudaFree(in);
+    // copy result from device to host (GPU->CPU)
+    cudaMemcpy(h_odata, odata, data_size, cudaMemcpyDeviceToHost);
+
+    // free allocated memory
+    cudaFree(idata);
+    cudaFree(odata);
     cudaFree(f);
-    cudaFree(out);
 }
 
 // print command line format
