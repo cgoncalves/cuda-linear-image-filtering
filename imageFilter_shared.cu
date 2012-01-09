@@ -122,7 +122,7 @@ __global__ void renderFilteredImage(unsigned int *idata, unsigned int w, unsigne
         sImage[threadIdx.y + fh_2*blockPadSize + threadIdx.x + fw_2] = idata[i*w + j];
 
         /*
-         * fill sImage with padding data
+         * fill sImage with padding data, but only when on image boundaries!
         `*/
 
         // top left corner
