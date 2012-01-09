@@ -125,82 +125,72 @@ __global__ void renderFilteredImage(unsigned int *idata, unsigned int w, unsigne
          * fill sImage with padding data
         `*/
 
-        // left side
-        if (threadIdx.x == 0)
+        // top left corner
+        if (threadIdx.x == 0 && threadIdx.y == 0)
         {
-            // top left corner
-            if (threadIdx.y == 0)
-            {
-                for (k=-fh_2; k<=0; k++) //filter height
-                    for (l=-fw_2; l<=0; l++) { //filter width
-                        if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
-                            sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
-                    }
-            }
-
-            // bottom left corner
-            else if (threadIdx.y == (blockDim.y - 1))
-            {
-                for (k=0; k<=fh_2; k++) //filter height
-                    for (l=-fw_2; l<=0; l++) //filter width
-                        if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
-                            sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
-            }
-
-            // remaining left side
-            else
-            {
-                for (l=-fw_2; l<=0; l++) //filter height
-                    if ((j+l >=0) && (j+l < w))
-                        sImage[threadIdx.y + fh_2*blockPadSize + threadIdx.x + fw_2+l] = idata[i*w + j+l];
-            }
+            for (k=-fh_2; k<=0; k++) //filter height
+                for (l=-fw_2; l<=0; l++) //filter width
+                    if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
+                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
         }
 
-        // right side
-        else if(threadIdx.x == (blockDim.x - 1))
+        // bottom left corner
+        else if (threadIdx.x == 0 && (threadIdx.y == (blockDim.y -1)))
         {
-            // top right corner
-            if (threadIdx.y == 0) {
-                for (k=-fh_2; k<=0; k++) //filter height
-                    for (l=0; l<=fw_2; l++) //filter width
-                        if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
-                            sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
-            }
-
-            // bottom right corner
-            else if (threadIdx.y == (blockDim.y - 1))
-            {
-                for (k=0; k<=fh_2; k++) //filter height
-                    for (l=0; l<=fw_2; l++) //filter width
-                        if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
-                            sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
-            }
-
-            // remaining right side
-            else
-            {
-                for (l=0; l<=fw_2; l++) //filter height
-                    if ((j+l >=0) && (j+l < w))
-                        sImage[threadIdx.y + fh_2*blockPadSize + threadIdx.x + fw_2+l] = idata[i*w + j+l];
-            }
+            for (k=0; k<=fh_2; k++) //filter height
+                for (l=-fw_2; l<=0; l++) //filter width
+                    if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
+                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
         }
 
-        // top
-        else if(threadIdx.y == 0)
+        // remaining left side
+        else if (threadIdx.x == 0)
         {
-            if (threadIdx.x != 0 && threadIdx.x != (blockDim.x - 1))
-                for (k=-fh_2; k<=0; k++) //filter width
-                    if ((i+k >= 0) && (i+k < h))
-                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2] = idata[(i+k)*w + j];
+            for (l=-fw_2; l<=0; l++) //filter height
+                if ((j+l >=0) && (j+l < w))
+                    sImage[threadIdx.y + fh_2*blockPadSize + threadIdx.x + fw_2+l] = idata[i*w + j+l];
         }
 
-        // bottom
-        else if(threadIdx.y == (blockDim.y - 1))
+        // top right corner
+        else if ((threadIdx.x == (blockDim.x -1)) && (threadIdx.y == 0))
         {
-            if (threadIdx.x != 0 && threadIdx.x != (blockDim.x - 1))
-                for (k=0; k<=fh_2; k++) //filter width
-                    if ((i+k >= 0) && (i+k < h))
-                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2] = idata[(i+k)*w + j];
+            for (k=-fh_2; k<=0; k++) //filter height
+                for (l=0; l<=fw_2; l++) //filter width
+                    if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
+                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
+        }
+
+        // bottom right corner
+        else if ((threadIdx.x == (blockDim.x -1)) && (threadIdx.y == (blockDim.y -1)))
+        {
+            for (k=0; k<=fh_2; k++) //filter height
+                for (l=0; l<=fw_2; l++) //filter width
+                    if ((i+k >= 0) && (i+k < h) && (j+l >=0) && (j+l < w))
+                        sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2+l] = idata[(i+k)*w + j+l];
+        }
+
+        // remaining right side
+        else if (threadIdx.x == (blockDim.x -1))
+        {
+            for (l=0; l<=fw_2; l++) //filter height
+                if ((j+l >=0) && (j+l < w))
+                    sImage[threadIdx.y + fh_2*blockPadSize + threadIdx.x + fw_2+l] = idata[i*w + j+l];
+        }
+
+        // top excluding corners
+        else if ((threadIdx.y == 0) && (threadIdx.x != 0) && (threadIdx.x != (blockDim.x - 1)))
+        {
+            for (k=-fh_2; k<=0; k++) //filter width
+                if ((i+k >= 0) && (i+k < h))
+                    sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2] = idata[(i+k)*w + j];
+        }
+
+        // bottom excluding corners
+        else if ((threadIdx.y == (blockDim.y - 1)) && (threadIdx.x != 0) && (threadIdx.x != (blockDim.x - 1)))
+        {
+            for (k=0; k<=fh_2; k++) //filter width
+                if ((i+k >= 0) && (i+k < h))
+                    sImage[(threadIdx.y + fh_2+k)*blockPadSize + threadIdx.x + fw_2] = idata[(i+k)*w + j];
         }
 
         /*

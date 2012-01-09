@@ -9,7 +9,7 @@ IMAGE_FILTER_TEST="$2"
 LOOP=$3
 DEVICE=$4
 
-FILTER="filter.txt"
+FILTER="motionblur19x19.txt"
 INPUT="lena.pgm"
 OUTPUT="lenaOut.pgm"
 
