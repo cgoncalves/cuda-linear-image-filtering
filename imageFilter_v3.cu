@@ -265,6 +265,12 @@ int main( int argc, char** argv)
         exit(1);
     }
 
+    // save output image
+    if (cutSavePGMi("lenaGPU.pgm", h_odata, w, h) != CUTTrue) {
+        printf("Failed to save image file: %s\n", fileOut);
+        exit(1);
+    }
+
     // cleanup memory
     cutFree( h_idata);
     free( h_odata);

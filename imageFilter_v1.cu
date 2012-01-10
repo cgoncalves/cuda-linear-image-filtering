@@ -95,8 +95,8 @@ __global__ void renderFilteredImage(unsigned int *idata, unsigned int w, unsigne
     sum = 0;
 
     // no convalescence
-    i = threadIdx.x;
-    j = blockIdx.y;
+    i = threadIdx.x + blockIdx.x * blockDim.x;
+    j = threadIdx.y + blockIdx.y * blockDim.y;
 
     for (k =- fh_2; k <= fh_2; k++) //filter height
     {
@@ -264,6 +264,12 @@ int main( int argc, char** argv)
 
     // save output image
     if (cutSavePGMi(fileOut, reference, w, h) != CUTTrue) {
+        printf("Failed to save image file: %s\n", fileOut);
+        exit(1);
+    }
+
+    // save output image
+    if (cutSavePGMi("lenaGPU.pgm", h_odata, w, h) != CUTTrue) {
         printf("Failed to save image file: %s\n", fileOut);
         exit(1);
     }
